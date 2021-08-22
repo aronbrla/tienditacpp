@@ -47,14 +47,58 @@ struct producto		//ESTRUCTURA DE LOS ARTÍCULOS EN VENTA.
 
 FILE *f;
 
-struct Nodo{
-	producto p;
-	Nodo *siguiente;
-};
+
+// Core Cesta de comprar con lista ennlazadas
+typedef producto PE;
+struct NODO{
+    NODO *sgte;
+    PE compra;
+}*la;
+NODO* crearNodo(PE dato){
+   NODO *p;
+   p= new NODO();
+   if(p==NULL) {
+      cout<<"\nNo Hay espacio en la mamoria..."<<endl;
+      system("pause");
+      exit(0);
+      return(p);
+   }
+   else {
+      p->compra=dato;
+      p->sgte=NULL;
+      return(p);
+   }
+}
+void adicionaNodoFinal(PE dato){
+   NODO *p, *q;
+   p=crearNodo(dato);
+   if(p==NULL) {
+      cout<<"\nNo Hay espacio en la mamoria..."<<endl;
+      system("pause");
+      exit(0);
+   }
+   else {
+      if(la==NULL) {
+         p->sgte= la;
+         la= p;
+
+      }
+      else {
+         q=la;
+         while(q->sgte!=NULL) {
+            q=q->sgte;
+         }
+         q->sgte=p;
+
+      }
+   }
+}
+// Fin Core
+
 
 	//PROTOTIPOS DE FUNCIÓN. 
 void act_archivo();	
-void act_vaucher(int vd[]);
+void act_vaucher();
 int menu();		//MENÚ PRINCIPAL DE OPCIONES. 
 int submenu1();	//SUBMENÚ DE LISTA DE PRODUCTOS. 
 int menu2();	//SUBMENÚ DE VENTAS. 
@@ -63,10 +107,10 @@ void rellenar(producto v[10]);	//VALORES DE LOS PRODUCTOS.
 void mostrar(producto v[10]);	//LISTA DE PRODUCTOS. 
 void mostrar2(producto P[10]);	//MOSTRAR LA CANTIDAD DE PRODUCTOS VENDIDOS. 
 void mostrar3(producto P[10]);	//MOSTRAR LA GANANCIA. 
-void agregar(producto p[], int vd[]);	//AGREGAR PRODUCTOS. 
-void eliminar(producto p[], int vd[]);	//ELIMINAR PRODUCTOS. 
-void modificar(producto p[], int vd[]);	//MODIFICAR EL PRODUCTO. 
-void voucher(producto p[], int v[]);	//IMPRIMIR EL VOUCHER. 
+void agregar(producto p[]);	//AGREGAR PRODUCTOS. 
+void eliminar(producto p[]);	//ELIMINAR PRODUCTOS. 
+void modificar(producto p[]);	//MODIFICAR EL PRODUCTO. 
+void voucher(producto p[]);	//IMPRIMIR EL VOUCHER. 
 void ordenarstock();	//ORDENAR POR STOCK. 
 void mayorganancia();	//ORDENAR POR MAYOR GANANCIA (SOLES). 
 void mayorcantidad();	//ORDENAR POR MAYOR CANTIDAD VENDIDA (UNIDADES). 
@@ -129,27 +173,28 @@ int main(){
 					}while(op2!=4);
 				break;
 				
-			case 3:		//INCIAR VENTA. 
+			case 3:		//INCIAR VENTA.
 				do{ system("cls");
 					op2 = menu3();
 					switch (op2)
 						{case 1:	//AGREGAR PRODUCTOS.  
-							mostrar(P); agregar(P,vendido);
+							mostrar(P); agregar(P);
 							break;
 						case 2:		//MODIFICAR CANTIDAD. 
-							modificar(P,vendido); 
+							modificar(P); 
 							break;
 						case 3:		//ELIMINAR PRODUCTO DEL CARRITO DE COMPRAS. 
-							eliminar(P,vendido);
+							eliminar(P);
 							break;		
 						case 4:		//MOSTRAR VOUCHER. 
 						    system("cls");
-							voucher(P,vendido); 
+							voucher(P); 
 							system("PAUSE");
 							break;
 						}
 						
 				}while(op2!=5);
+					la = NULL;
 					remove(vaucher); //Eliminar los datos del vaucher para volver a llenar
 					
 				break;
@@ -176,8 +221,9 @@ void act_archivo()
 	 rename(archivo2,archivo);
 }
 
-void act_vaucher(int vd[])
+void act_vaucher()
 {
+	NODO *p = la;
 	f=fopen(archivo2,"ab+");
 	if (f==NULL){
 		cout<<"El archivo no existe!"<<endl;
@@ -185,17 +231,19 @@ void act_vaucher(int vd[])
 	    return;
 	}
 	fread(&t,sizeof(t),1,f);
-	for(int i=0;i<10;i++){
-		if(vd[i]!=0)
-		{
-			strcpy(t.nombre,P[i].nombre);
-			t.cod=P[i].cod;
-			t.precio=P[i].precio;
-			t.stock=P[i].stock;
-			t.vend=vd[i];
-			fwrite(&t,sizeof(t),1,f);
-		}	
+	if(p == NULL) {
+	      cout<<"\nLista vacia..."<<endl;
 	}
+	else {
+	while(p) {
+			strcpy(t.nombre,p->compra.nombre );
+			t.cod=p->compra.cod;
+			t.precio=p->compra.precio;
+			t.vend=p->compra.vend;
+			fwrite(&t,sizeof(t),1,f);
+         p = p->sgte;
+      }
+   }
 	 fclose(f);
 	 remove(vaucher);
 	 rename(archivo2,vaucher);
@@ -461,10 +509,12 @@ void ordenarstock()
 				P[i]=t;
     		}
 }
-
+	
 	//AGREGAR PRODUCTOS. 
-void agregar(producto p[], int vd[])
+void agregar(producto p[])
 	{int ind, cant, lim;
+	int vd[]={5,6};
+	producto temporal;
 	char resp;
 	do{
     	do{	system("cls");	//ELEGIR LOS PRODUCTOS. 
@@ -475,6 +525,11 @@ void agregar(producto p[], int vd[])
 					cout<<"\t[Ese codigo de producto no existe]"<<endl<<endl;
 			}while(ind<1 || ind>10);
 		}while(ind<1||ind>10);
+		//Guardando datos de producto comprado en la estructura temporal;
+		temporal.cod = ind;
+		strcpy(temporal.nombre,p[-1+ind].nombre);
+		temporal.precio = p[-1+ind].precio;
+		
 		ind--;
 		do{	cout<<"\tCantidad a comprar: ";		//INGRESAR LA CANTIDAD. 
 			fflush(stdin);
@@ -485,25 +540,28 @@ void agregar(producto p[], int vd[])
 			else if(cant<0)
 				cout<<"\t[Por favor no ingrese una cantidad absurda]"<<endl;
 		}while(cant<0||cant>lim);
-		vd[ind] = cant;
+		
+		temporal.vend = cant;
 		p[ind].vend += cant;
 		p[ind].stock -= cant;
-		cout<<"\n\tEl subtotal es: "<<p[ind].precio*cant<<endl;	//PRESENTAR EL SUBTOTAL. 
+		cout<<"\n\tEl subtotal es: "<<temporal.precio*temporal.vend<<endl;	//PRESENTAR EL SUBTOTAL. 
 		getch();
 		do{
 			cout<<"\n¿Desea agregar más productos? Sí [s] o No [n]: [ ]\b\b";
 			cin>>resp;
   	      	resp=toupper(resp);
   	  	}while(resp!='S' && resp!='N');
-  	  	  act_vaucher(vd);
+  	  		adicionaNodoFinal(temporal);
+  	  	  act_vaucher();
 		  act_archivo();
 	}while(resp=='S');
 }
 
 	//ELIMINAR PRODUCTOS. 
-void eliminar(producto p[], int vd[])
+void eliminar(producto p[])
 	{int cant, ind; 
 	char resp;
+	NODO *ps=la, *l=la;
 	do{	
 		system("cls");
 		cout<<"  ========================================="<<endl;
@@ -511,81 +569,120 @@ void eliminar(producto p[], int vd[])
 		cout<<"  ========================================="<<endl;
 		cout<<"=============================================="<<endl;
 		cout<<"CODIGO"<<setw(20)<<"PRODUCTO"<<setw(20)<<"CANTIDAD"<<endl;
-		for(int i=0; i<10; i++)
-			if(vd[i]>0)
-				cout<<setw(5)<<p[i].cod<<setw(20)<<p[i].nombre<<setw(17)<<vd[i]<<endl;
+		while(ps){
+			if(ps->compra.vend>0)
+				cout<<setw(5)<<ps->compra.cod
+					<<setw(20)<<ps->compra.nombre
+					<<setw(17)<<ps->compra.vend
+				<<endl;
+			ps = ps->sgte;
+		}
 		do{	cout<<"\n->Ingrese el orden de producto a eliminar: ";cin>>ind;
 			if(ind<1 || ind>10)
 				cout<<"\t[Por favor no ingrese un producto inexistente]\n";
 		}while(ind<1 || ind>10);
-			--ind; //Para la posición en la que se encuentra en verdad. 
-		if(vd[ind]>0){
-			cant=vd[ind];
-			vd[ind] -= cant;
-			p[ind].vend -= cant;
-			p[ind].stock += cant;
-			cout<<"\n\t¡El producto ha sido eliminado con éxito!";
-			getch();
+		
+		
+		// Eliminando de la lista	
+		if(l == NULL) {
+		cout<<"\nLista vacia..."<<endl;
 		}
-		else	cout<<"\t[Por favor no ingrese productos no añadidos]\n"<<endl;
+		else {
+			while(l) {
+			 if(l->compra.cod==ind){
+				--ind; //Para la posición en la que se encuentra en verdad. 
+				if(l->compra.vend>0){
+					cant=l->compra.vend;
+					p[ind].vend -= cant;
+					p[ind].stock += cant;
+				}
+			    l->compra=(l->sgte)->compra;
+			    l->sgte=(l->sgte)->sgte;
+			 }
+			 l=l->sgte;
+			}
+		}
+		
+		cout<<"\n\t¡El producto ha sido eliminado con éxito!";
+		getch();
+		
 		do{
 			cout<<"\n¿Desea eliminar otro registro? Sí [s] o No [n]: [ ]\b\b";
 			cin>>resp;
 			resp=toupper(resp);
         }while(resp!='S' && resp!='N');
-        act_vaucher(vd);
+        act_vaucher();
 		act_archivo();  
 	}while(resp=='S');
 }
 
+
 	//MODIFICAR EL PRODUCTO. 
-void modificar(producto p[], int vd[])
+void modificar(producto p[])
 	{int cant, ind; 
 	char resp;
 	do{	
+		NODO *ps=la;
+		NODO *l=la;
 		system("cls");
 		cout<<"  =========================================="<<endl;
 		cout<<"  | | | MODIFICAR PRODUCTO DE LA LISTA | | |"<<endl;
 		cout<<"  =========================================="<<endl;
 		cout<<"=============================================="<<endl;
 		cout<<"CODIGO"<<setw(20)<<"PRODUCTO"<<setw(20)<<"CANTIDAD"<<endl;
-		for(int i=0; i<10; i++)
-			if(vd[i]>0)
-				cout<<setw(5)<<p[i].cod<<setw(20)<<p[i].nombre<<setw(17)<<vd[i]<<endl;
+		while(ps){
+			if(ps->compra.vend>0)
+				cout<<setw(5)<<ps->compra.cod
+					<<setw(20)<<ps->compra.nombre
+					<<setw(17)<<ps->compra.vend
+				<<endl;
+			ps = ps->sgte;
+		}
 		cout<<"=============================================="<<endl;
 		do{	cout<<"\n-> Ingrese el orden de producto a modificar: ";cin>>ind;
 			if(ind<1 || ind>10)
 				cout<<"\t[Por favor no ingrese un producto inexistente]\n";
 		}while(ind<1 || ind>10);
-			--ind; //Para la posición en la que se encuentra en verdad. 
-		if(vd[ind]>0){
-			cant=vd[ind];
-			vd[ind] -= cant;
-			p[ind].vend -= cant;
-			p[ind].stock += cant;
-			do{		//PEDIR UNA NUEVA CANTIDAD. 
-				cout<<"\tNueva cantidad: "; cin>>vd[ind];
-				if(vd[ind]>p[ind].stock)
-					cout<<"\t[Por favor ingrese una cantidad que no sobrepase la del stock]\n"<<endl;
-			}while(vd[ind]<0 || vd[ind]>p[ind].stock);
-			p[ind].vend += vd[ind];
-			p[ind].stock -= vd[ind];
-			cout<<"\n\t¡La cantidad ha sido cambiada con éxito!";
-			getch();
+			
+		// Eliminando de la lista	
+		if(l == NULL) {
+		cout<<"\nLista vacia..."<<endl;
 		}
-		else	cout<<"\t[Por favor no ingrese productos no añadidos]\n"<<endl;
+		else {
+			while(l) {
+			 if(l->compra.cod==ind){
+				--ind; //Para la posición en la que se encuentra en verdad. 
+				if(l->compra.vend>0){
+					cant=l->compra.vend;
+					p[ind].vend -= cant;
+					p[ind].stock += cant;
+					do{		//PEDIR UNA NUEVA CANTIDAD. 
+					cout<<"\tNueva cantidad: ";
+					cin>>cant;
+					if(cant>p[ind].stock)
+						cout<<"\t[Por favor ingrese una cantidad que no sobrepase la del stock]\n"<<endl;
+					}while(cant< 0 || cant>p[ind].stock);
+					l->compra.vend = cant;
+					p[ind].vend += cant;
+					p[ind].stock -= cant;
+				}
+			 }
+			 l=l->sgte;
+			}
+		}
+		
 		do{
 			cout<<"\n¿Desea modificar otro producto? Sí [s] o No [n]: [ ]\b\b";
         	cin>>resp;
     	    resp=toupper(resp);
         }while(resp!='S' && resp!='N');
-        act_vaucher(vd);
+        act_vaucher();
 		act_archivo();   
 	}while(resp=='S');
 }
 
 	//IMPRIMIR EL VOUCHER. 
-void voucher(producto p[], int vd[]){
+void voucher(producto p[]){
 	int i=0;
 	float total=0;
 	f=fopen(vaucher,"ab+");
